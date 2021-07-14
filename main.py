@@ -1,22 +1,31 @@
 #!/usr/bin/env python3
 import tcod
 
-from actions import EscapeAction, MovementAction
+from engine import Engine
+from entities import Entity
+from game_map import GameMap
 from input_handler import EventHandler
 
 
 def main() -> None:
     screen_width = 80
     screen_height = 50
-    # Need to be cast to int or else uses float
-    player_x = int(screen_width / 2)
-    player_y = int(screen_height / 2)
+
+    map_width = 80
+    map_height = 45
 
     tileset = tcod.tileset.load_tilesheet(
         "dejavu10x10_gs_tc.png", 32, 8, tcod.tileset.CHARMAP_TCOD
     )
 
     event_handler = EventHandler()
+
+    player = Entity(int(screen_width/2), int(screen_height/2), "@", (255, 255, 255))
+    npc = Entity(int(screen_width/2 -5), int(screen_height/2), "@", (255, 255, 0))
+    entities = {npc, player}
+
+    game_map = GameMap(map_width, map_height)
+    engine = Engine(entities=entities, event_handler=event_handler, game_map=game_map, player=player)
 
     with tcod.context.new_terminal(
             screen_width,
@@ -28,33 +37,11 @@ def main() -> None:
         root_console = tcod.Console(screen_width, screen_height, order="F")
         # Game play loop
         while True:
-            # Print the string to the co-ordinates
-            root_console.print(x=player_x, y=player_y, string="@")
+            engine.render(console=root_console, context=context)
 
-            # Update the display
-            context.present(root_console)
+            events = tcod.event.wait()
 
-            # Clear previous prints
-            root_console.clear()
-
-            # Wait for a user input event and close gracefully if quit is used (top-right X)
-            for event in tcod.event.wait():
-
-                # Action is sent to the EventHandler event and the appropriate action assigned
-                action = event_handler.dispatch(event)
-
-                # Do nothing
-                if action is None:
-                    continue
-
-                # Process movement by value assigned
-                if isinstance(action, MovementAction):
-                    player_x += action.dx
-                    player_y += action.dy
-
-                # Close game gracefully
-                elif isinstance(action, EscapeAction):
-                    raise SystemExit()
+            engine.handle_events(events)
 
 
 if __name__ == "__main__":
