@@ -5,6 +5,7 @@ from typing import Iterator, List, Tuple, TYPE_CHECKING
 
 import tcod
 
+import entity_factory
 from game_map import GameMap
 import tile_types
 
@@ -41,6 +42,21 @@ class RectangleRoom:
             and self.y2 >= other.y1
         )
 
+def place_entities(
+        room: RectangleRoom, dungeon: GameMap, maximum_entities: int,
+) -> None:
+    number_of_entities = random.randint(0, maximum_entities)
+
+    for i in range(number_of_entities):
+        x = random.randint(room.x1 + 1, room.x2 -1)
+        y = random.randint(room.y1 + 1, room.y2 - 1)
+
+        if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
+            if random.random() < 0.9:
+                entity_factory.orc.spawn(dungeon, x, y)
+            else:
+                entity_factory.troll.spawn(dungeon, x, y)
+
 
 def joining_corridor(
         start: Tuple[int, int], end: Tuple[int, int]
@@ -68,10 +84,11 @@ def generate_dungeon(
         room_max_size: int,
         map_width: int,
         map_height: int,
+        max_entities_per_room: int,
         player: Entity,
 ) -> GameMap:
     # New dungeon map
-    dungeon = GameMap(map_width, map_height)
+    dungeon = GameMap(map_width, map_height, entities=[player])
 
     rooms: List[RectangleRoom] = []
 
@@ -100,6 +117,8 @@ def generate_dungeon(
             # Join this and previous room with corridor
             for x, y in joining_corridor(rooms[-1].centre, new_room.centre):
                 dungeon.tiles[x, y] = tile_types.floor
+
+        place_entities(new_room, dungeon, max_entities_per_room)
 
         # Append the room to the list
         rooms.append(new_room)
